@@ -614,8 +614,6 @@ struct SellArgs {
 struct BuyArgs {
     bytes32 buyToken;
     uint256 guaranteedBuyAmount;
-    uint256 buycallgas;
-    bytes buycalldata;
 }
 
 struct Fee {
@@ -712,6 +710,7 @@ contract ValueRouter is AdminControl, IValueRouter {
     uint16 public immutable version = 1;
 
     bytes32 public nobleCaller;
+    bytes32 public solanaCaller;
 
     mapping(uint32 => bytes32) public remoteRouter;
     mapping(bytes32 => address) swapHashSender;
@@ -735,6 +734,10 @@ contract ValueRouter is AdminControl, IValueRouter {
         nobleCaller = caller;
     }
 
+    function setSolanaCaller(bytes32 caller) public onlyAdmin {
+        solanaCaller = caller;
+    }
+
     function setRemoteRouter(uint32 remoteDomain, address router)
         public
         onlyAdmin
@@ -742,13 +745,11 @@ contract ValueRouter is AdminControl, IValueRouter {
         remoteRouter[remoteDomain] = router.addressToBytes32();
     }
 
-    function setRemoteRouter(
-        uint32[] calldata remoteDomains,
-        bytes32[] calldata routers
-    ) public onlyAdmin {
-        for (uint256 i = 0; i < remoteDomains.length; i++) {
-            remoteRouter[remoteDomains[i]] = routers[i];
-        }
+    function setRemoteRouter(uint32 remoteDomain, bytes32 router)
+        public
+        onlyAdmin
+    {
+        remoteRouter[remoteDomain] = router;
     }
 
     function takeFee(address to, uint256 amount) public onlyAdmin {
@@ -866,6 +867,10 @@ contract ValueRouter is AdminControl, IValueRouter {
         return (domain == 4);
     }
 
+    function isSolana(uint32 domain) public pure returns (bool) {
+        return (domain == 5);
+    }
+
     /// User entrance
     /// @param sellArgs : sell-token arguments
     /// @param buyArgs : buy-token arguments
@@ -942,13 +947,23 @@ contract ValueRouter is AdminControl, IValueRouter {
 
         bytes32 destRouter = remoteRouter[destDomain];
 
-        bridgeNonce = tokenMessenger.depositForBurnWithCaller(
-            bridgeUSDCAmount,
-            destDomain,
-            destRouter,
-            usdc,
-            destRouter
-        );
+        if (isSolana(destDomain)) {
+            bridgeNonce = tokenMessenger.depositForBurnWithCaller(
+                bridgeUSDCAmount,
+                destDomain,
+                destRouter,
+                usdc,
+                solanaCaller
+            );
+        } else {
+            bridgeNonce = tokenMessenger.depositForBurnWithCaller(
+                bridgeUSDCAmount,
+                destDomain,
+                destRouter,
+                usdc,
+                destRouter
+            );
+        }
 
         bytes32 bridgeNonceHash = keccak256(
             abi.encodePacked(messageTransmitter.localDomain(), bridgeNonce)
@@ -964,12 +979,22 @@ contract ValueRouter is AdminControl, IValueRouter {
             recipient
         );
         bytes memory messageBody = swapMessage.encode();
-        uint64 swapMessageNonce = messageTransmitter.sendMessageWithCaller(
-            destDomain,
-            destRouter, // remote router will receive this message
-            destRouter, // message will only submited through the remote router (handleBridgeAndSwap)
-            messageBody
-        );
+        uint64 swapMessageNonce;
+        if (isSolana(destDomain)) {
+            swapMessageNonce = messageTransmitter.sendMessageWithCaller(
+                destDomain,
+                destRouter, // cctp message receiver
+                solanaCaller, // cctp message caller
+                messageBody
+            );
+        } else {
+            swapMessageNonce = messageTransmitter.sendMessageWithCaller(
+                destDomain,
+                destRouter, // remote router will receive this message
+                destRouter, // message will only submited through the remote router (handleBridgeAndSwap)
+                messageBody
+            );
+        }
         emit SwapAndBridge(
             sellArgs.sellToken,
             buyArgs.buyToken.bytes32ToAddress(),
@@ -1159,3 +1184,4 @@ contract ValueRouter is AdminControl, IValueRouter {
         return messageTransmitter.localDomain();
     }
 }
+
