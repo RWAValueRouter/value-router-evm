@@ -39,6 +39,33 @@ abstract contract AdminControl {
     }
 }
 
+abstract contract AdminPausable is AdminControl {
+    mapping(string => bool) private _pausedFunctions;
+
+    event Paused(string functionName);
+    event Unpaused(string functionName);
+
+    constructor(address _admin) AdminControl(_admin) {}
+
+    modifier whenNotPaused(string memory functionName) {
+        require(
+            !_pausedFunctions[functionName],
+            "Pausable: function is paused"
+        );
+        _;
+    }
+
+    function pauseFunction(string memory functionName) public onlyAdmin {
+        _pausedFunctions[functionName] = true;
+        emit Paused(functionName);
+    }
+
+    function unpauseFunction(string memory functionName) public onlyAdmin {
+        _pausedFunctions[functionName] = false;
+        emit Unpaused(functionName);
+    }
+}
+
 struct MessageWithAttestation {
     bytes message;
     bytes attestation;
@@ -128,7 +155,7 @@ interface IValueRouter {
     ) external;
 }
 
-contract ValueRouter is AdminControl, IValueRouter {
+contract ValueRouter is IValueRouter, AdminPausable {
     using Bytes for *;
     using TypedMemView for bytes;
     using TypedMemView for bytes29;
@@ -153,6 +180,8 @@ contract ValueRouter is AdminControl, IValueRouter {
     uint16 public immutable version = 1;
 
     bytes32 public nobleCaller;
+    bytes32 public solanaCaller;
+    bytes32 public solanaProgramUsdcAccount;
 
     mapping(uint32 => bytes32) public remoteRouter;
     mapping(bytes32 => address) swapHashSender;
@@ -163,7 +192,7 @@ contract ValueRouter is AdminControl, IValueRouter {
         address _tokenMessenger,
         address _zeroEx,
         address admin
-    ) AdminControl(admin) {
+    ) AdminPausable(admin) {
         usdc = _usdc;
         messageTransmitter = IMessageTransmitter(_messageTransmitter);
         tokenMessenger = ITokenMessenger(_tokenMessenger);
@@ -176,6 +205,16 @@ contract ValueRouter is AdminControl, IValueRouter {
         nobleCaller = caller;
     }
 
+    function setSolanaCaller(
+        bytes32 caller
+    ) public onlyAdmin {
+        solanaCaller = caller;
+    }
+
+    function setSolanaProgramUsdcAccount(bytes32 account) public onlyAdmin {
+        solanaProgramUsdcAccount = account;
+    }
+
     function setRemoteRouter(
         uint32 remoteDomain,
         address router
@@ -184,12 +223,10 @@ contract ValueRouter is AdminControl, IValueRouter {
     }
 
     function setRemoteRouter(
-        uint32[] calldata remoteDomains,
-        bytes32[] calldata routers
+        uint32 remoteDomain,
+        bytes32 router
     ) public onlyAdmin {
-        for (uint256 i = 0; i < remoteDomains.length; i++) {
-            remoteRouter[remoteDomains[i]] = routers[i];
-        }
+        remoteRouter[remoteDomain] = router;
     }
 
     function takeFee(address to, uint256 amount) public onlyAdmin {
@@ -274,7 +311,7 @@ contract ValueRouter is AdminControl, IValueRouter {
         address buyToken,
         uint256 guaranteedBuyAmount,
         address recipient
-    ) public payable {
+    ) public payable whenNotPaused("swap") {
         if (sellToken == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
             require(msg.value >= sellAmount, "tx value is not enough");
         } else {
@@ -307,6 +344,10 @@ contract ValueRouter is AdminControl, IValueRouter {
         return (domain == 4);
     }
 
+    function isSolana(uint32 domain) public pure returns (bool) {
+        return (domain == 5);
+    }
+
     /// User entrance
     /// @param sellArgs : sell-token arguments
     /// @param buyArgs : buy-token arguments
@@ -317,7 +358,7 @@ contract ValueRouter is AdminControl, IValueRouter {
         BuyArgs calldata buyArgs,
         uint32 destDomain,
         bytes32 recipient
-    ) public payable returns (uint64, uint64) {
+    ) public payable whenNotPaused("swapAndBridge") returns (uint64, uint64) {
         uint256 _fee = fee[destDomain].swapFee;
         if (buyArgs.buyToken == bytes32(0)) {
             _fee = fee[destDomain].bridgeFee;
@@ -383,13 +424,23 @@ contract ValueRouter is AdminControl, IValueRouter {
 
         bytes32 destRouter = remoteRouter[destDomain];
 
-        bridgeNonce = tokenMessenger.depositForBurnWithCaller(
-            bridgeUSDCAmount,
-            destDomain,
-            destRouter,
-            usdc,
-            destRouter
-        );
+        if (isSolana(destDomain)) {
+            bridgeNonce = tokenMessenger.depositForBurnWithCaller(
+                bridgeUSDCAmount,
+                destDomain,
+                solanaProgramUsdcAccount,
+                usdc,
+                solanaCaller
+            );
+        } else {
+            bridgeNonce = tokenMessenger.depositForBurnWithCaller(
+                bridgeUSDCAmount,
+                destDomain,
+                destRouter,
+                usdc,
+                destRouter
+            );
+        }
 
         bytes32 bridgeNonceHash = keccak256(
             abi.encodePacked(messageTransmitter.localDomain(), bridgeNonce)
@@ -404,13 +455,22 @@ contract ValueRouter is AdminControl, IValueRouter {
             buyArgs.guaranteedBuyAmount,
             recipient
         );
-        bytes memory messageBody = swapMessage.encode();
-        uint64 swapMessageNonce = messageTransmitter.sendMessageWithCaller(
-            destDomain,
-            destRouter, // remote router will receive this message
-            destRouter, // message will only submited through the remote router (handleBridgeAndSwap)
-            messageBody
-        );
+        uint64 swapMessageNonce;
+        if (isSolana(destDomain)) {
+            swapMessageNonce = messageTransmitter.sendMessageWithCaller(
+                destDomain,
+                destRouter, // cctp message receiver
+                solanaCaller, // cctp message caller
+                swapMessage.encode()
+            );
+        } else {
+            swapMessageNonce = messageTransmitter.sendMessageWithCaller(
+                destDomain,
+                destRouter, // remote router will receive this message
+                destRouter, // message will only submited through the remote router (handleBridgeAndSwap)
+                swapMessage.encode()
+            );
+        }
         emit SwapAndBridge(
             sellArgs.sellToken,
             buyArgs.buyToken.bytes32ToAddress(),
@@ -477,7 +537,7 @@ contract ValueRouter is AdminControl, IValueRouter {
         MessageWithAttestation calldata swapMessage,
         bytes calldata swapdata,
         uint256 callgas
-    ) public {
+    ) public whenNotPaused("relay") {
         uint32 sourceDomain = bridgeMessage.message.sourceDomain();
         require(
             swapMessage.message.sourceDomain() == sourceDomain,
