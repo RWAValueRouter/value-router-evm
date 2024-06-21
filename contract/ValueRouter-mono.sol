@@ -729,6 +729,7 @@ contract ValueRouter is IValueRouter, AdminPausable {
     bytes32 public nobleCaller;
     bytes32 public solanaCaller;
     bytes32 public solanaProgramUsdcAccount;
+    bytes32 public solanaReceiver;
 
     mapping(uint32 => bytes32) public remoteRouter;
     mapping(bytes32 => address) swapHashSender;
@@ -752,14 +753,16 @@ contract ValueRouter is IValueRouter, AdminPausable {
         nobleCaller = caller;
     }
 
-    function setSolanaCaller(
-        bytes32 caller
-    ) public onlyAdmin {
+    function setSolanaCaller(bytes32 caller) public onlyAdmin {
         solanaCaller = caller;
     }
 
     function setSolanaProgramUsdcAccount(bytes32 account) public onlyAdmin {
         solanaProgramUsdcAccount = account;
+    }
+
+    function setSolanaReceiver(bytes32 account) public onlyAdmin {
+        solanaReceiver = account;
     }
 
     function setRemoteRouter(
@@ -1006,7 +1009,7 @@ contract ValueRouter is IValueRouter, AdminPausable {
         if (isSolana(destDomain)) {
             swapMessageNonce = messageTransmitter.sendMessageWithCaller(
                 destDomain,
-                destRouter, // cctp message receiver
+                solanaReceiver, // cctp message receiver
                 solanaCaller, // cctp message caller
                 swapMessage.encode()
             );
