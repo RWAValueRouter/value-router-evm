@@ -652,6 +652,17 @@ interface IValueRouter {
         bytes32 bridgeHash
     );
 
+    event SwapAndBridge2(
+        address sellToken,
+        bytes32 buyToken,
+        uint256 bridgeUSDCAmount,
+        uint32 destDomain,
+        bytes32 recipient,
+        uint64 bridgeNonce,
+        uint64 swapMessageNonce,
+        bytes32 bridgeHash
+    );
+
     event ReplaceSwapMessage(
         address buyToken,
         uint32 destDomain,
@@ -969,6 +980,16 @@ contract ValueRouter is IValueRouter, AdminPausable {
                 0,
                 bytes32(0)
             );
+            emit SwapAndBridge2(
+                sellArgs.sellToken,
+                buyArgs.buyToken,
+                bridgeUSDCAmount,
+                destDomain,
+                recipient,
+                bridgeNonce,
+                0,
+                bytes32(0)
+            );
             return (bridgeNonce, 0);
         }
 
@@ -1027,6 +1048,16 @@ contract ValueRouter is IValueRouter, AdminPausable {
             bridgeUSDCAmount,
             destDomain,
             recipient.bytes32ToAddress(),
+            bridgeNonce,
+            swapMessageNonce,
+            bridgeNonceHash
+        );
+        emit SwapAndBridge2(
+            sellArgs.sellToken,
+            buyArgs.buyToken,
+            bridgeUSDCAmount,
+            destDomain,
+            recipient,
             bridgeNonce,
             swapMessageNonce,
             bridgeNonceHash
