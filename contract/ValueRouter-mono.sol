@@ -776,6 +776,18 @@ contract ValueRouter is IValueRouter, AdminPausable {
         solanaReceiver = account;
     }
 
+    function setupSolana(
+        bytes32 valueRouter,
+        bytes32 caller,
+        bytes32 programUsdcAccount,
+        bytes32 cctpReceiver
+    ) public onlyAdmin {
+        remoteRouter[5] = valueRouter;
+        solanaCaller = caller;
+        solanaProgramUsdcAccount = programUsdcAccount;
+        solanaReceiver = cctpReceiver;
+    }
+
     function setRemoteRouter(
         uint32 remoteDomain,
         address router
@@ -788,6 +800,15 @@ contract ValueRouter is IValueRouter, AdminPausable {
         bytes32 router
     ) public onlyAdmin {
         remoteRouter[remoteDomain] = router;
+    }
+
+    function setRemoteRouters(
+        uint32[] memory remoteDomains,
+        bytes32[] memory routers
+    ) public onlyAdmin {
+        for (uint256 i = 0; i < remoteDomains.length; i++) {
+            remoteRouter[remoteDomains[i]] = routers[i];
+        }
     }
 
     function takeFee(address to, uint256 amount) public onlyAdmin {
