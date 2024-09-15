@@ -19,23 +19,18 @@ library SwapMessageCodec {
     uint8 public constant BUYAMOUNT_END_INDEX = 132;
     uint8 public constant RECIPIENT_END_INDEX = 164;
 
-    function encode(
-        SwapMessage memory swapMessage
-    ) public pure returns (bytes memory) {
-        return
-            abi.encodePacked(
-                swapMessage.version,
-                swapMessage.bridgeNonceHash,
-                swapMessage.sellAmount,
-                swapMessage.buyToken,
-                swapMessage.guaranteedBuyAmount,
-                swapMessage.recipient
-            );
+    function encode(SwapMessage memory swapMessage) public pure returns (bytes memory) {
+        return abi.encodePacked(
+            swapMessage.version,
+            swapMessage.bridgeNonceHash,
+            swapMessage.sellAmount,
+            swapMessage.buyToken,
+            swapMessage.guaranteedBuyAmount,
+            swapMessage.recipient
+        );
     }
 
-    function decode(
-        bytes memory message
-    ) public pure returns (SwapMessage memory) {
+    function decode(bytes memory message) public pure returns (SwapMessage memory) {
         uint32 version;
         bytes32 bridgeNonceHash;
         uint256 sellAmount;
@@ -51,15 +46,7 @@ library SwapMessageCodec {
             recipient := mload(add(message, RECIPIENT_END_INDEX))
         }
 
-        return
-            SwapMessage(
-                version,
-                bridgeNonceHash,
-                sellAmount,
-                buyToken,
-                guaranteedBuyAmount,
-                recipient
-            );
+        return SwapMessage(version, bridgeNonceHash, sellAmount, buyToken, guaranteedBuyAmount, recipient);
     }
 
     /*
@@ -101,5 +88,5 @@ library SwapMessageCodec {
         require(keccak256(message) == keccak256(encoded));
         return true;
     }
-*/
+    */
 }

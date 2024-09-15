@@ -1,4 +1,3 @@
-
 import "./Bytes.sol";
 import "./TypedMemView.sol";
 
@@ -6,6 +5,7 @@ library CCTPMessage {
     using TypedMemView for bytes;
     using TypedMemView for bytes29;
     using Bytes for bytes;
+
     uint8 public constant SOURCE_DOMAIN_INDEX = 4;
     uint8 public constant SENDER_INDEX = 20;
     uint8 public constant DESTINATION_CALLER_INDEX = 84;
@@ -27,27 +27,15 @@ library CCTPMessage {
         return _sender(_message.ref(0));
     }
 
-    function _destinationCaller(bytes29 _message)
-        private
-        pure
-        returns (bytes32)
-    {
+    function _destinationCaller(bytes29 _message) private pure returns (bytes32) {
         return _message.index(DESTINATION_CALLER_INDEX, 32);
     }
 
-    function destinationCaller(bytes memory _message)
-        public
-        pure
-        returns (bytes32)
-    {
+    function destinationCaller(bytes memory _message) public pure returns (bytes32) {
         return _destinationCaller(_message.ref(0));
     }
 
     function body(bytes memory message) public pure returns (bytes memory) {
-        return
-            message.slice(
-                MESSAGE_BODY_INDEX,
-                message.length - MESSAGE_BODY_INDEX
-            );
+        return message.slice(MESSAGE_BODY_INDEX, message.length - MESSAGE_BODY_INDEX);
     }
 }

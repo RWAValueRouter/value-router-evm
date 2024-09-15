@@ -6,10 +6,7 @@ interface IMessageTransmitter {
         bytes calldata messageBody
     ) external returns (uint64);
 
-    function receiveMessage(
-        bytes calldata message,
-        bytes calldata attestation
-    ) external returns (bool success);
+    function receiveMessage(bytes calldata message, bytes calldata attestation) external returns (bool success);
 
     function replaceMessage(
         bytes calldata originalMessage,

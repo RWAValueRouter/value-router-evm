@@ -941,8 +941,19 @@ contract ValueRouter is IValueRouter, AdminPausable {
         uint32 destDomain,
         bytes32 recipient
     ) public payable whenNotPaused("swapAndBridge") returns (uint64, uint64) {
+        // to receive usdc on dest -> _fee = bridgeFee
+        // to receive other token on dest (require swap) -> _fee = swapFee
         uint256 _fee = fee[destDomain].swapFee;
         if (buyArgs.buyToken == bytes32(0)) {
+            _fee = fee[destDomain].bridgeFee;
+        }
+        if (
+            isSolana(destDomain) &&
+            buyArgs.buyToken ==
+            bytes32(
+                0xc6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61
+            )
+        ) {
             _fee = fee[destDomain].bridgeFee;
         }
         require(msg.value >= _fee);

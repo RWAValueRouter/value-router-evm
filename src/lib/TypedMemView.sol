@@ -1,7 +1,6 @@
 library TypedMemView {
     // The null view
-    bytes29 public constant NULL =
-        hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    bytes29 public constant NULL = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
     // Mask a low uint96
     uint256 constant LOW_12_MASK = 0xffffffffffffffffffffffff;
     // Shift constants
@@ -40,9 +39,7 @@ library TypedMemView {
      * @return      first - The top 16 bytes
      * @return      second - The bottom 16 bytes
      */
-    function encodeHex(
-        uint256 _b
-    ) internal pure returns (uint256 first, uint256 second) {
+    function encodeHex(uint256 _b) internal pure returns (uint256 first, uint256 second) {
         for (uint8 i = 31; i > 15; i -= 1) {
             uint8 _byte = uint8(_b >> (i * 8));
             first |= byteHex(_byte);
@@ -70,10 +67,7 @@ library TypedMemView {
         // ugly. redo without assembly?
         assembly {
             // solium-disable-previous-line security/no-inline-assembly
-            mask := sar(
-                sub(_len, 1),
-                0x8000000000000000000000000000000000000000000000000000000000000000
-            )
+            mask := sar(sub(_len, 1), 0x8000000000000000000000000000000000000000000000000000000000000000)
         }
     }
 
@@ -87,11 +81,7 @@ library TypedMemView {
      * @param _len      The length
      * @return          newView - The new view with the specified type, location and length
      */
-    function unsafeBuildUnchecked(
-        uint256 _type,
-        uint256 _loc,
-        uint256 _len
-    ) private pure returns (bytes29 newView) {
+    function unsafeBuildUnchecked(uint256 _type, uint256 _loc, uint256 _len) private pure returns (bytes29 newView) {
         uint256 _uint96Bits = 96;
         uint256 _emptyBits = 24;
         assembly {
@@ -112,17 +102,11 @@ library TypedMemView {
      * @param _len      The length
      * @return          newView - The new view with the specified type, location and length
      */
-    function build(
-        uint256 _type,
-        uint256 _loc,
-        uint256 _len
-    ) internal pure returns (bytes29 newView) {
+    function build(uint256 _type, uint256 _loc, uint256 _len) internal pure returns (bytes29 newView) {
         uint256 _end = _loc + _len;
         assembly {
             // solium-disable-previous-line security/no-inline-assembly
-            if gt(_end, mload(0x40)) {
-                _end := 0
-            }
+            if gt(_end, mload(0x40)) { _end := 0 }
         }
         if (_end == 0) {
             return NULL;
@@ -138,10 +122,7 @@ library TypedMemView {
      * @param newType   The type
      * @return          bytes29 - The memory view
      */
-    function ref(
-        bytes memory arr,
-        uint40 newType
-    ) internal pure returns (bytes29) {
+    function ref(bytes memory arr, uint40 newType) internal pure returns (bytes29) {
         uint256 _len = arr.length;
 
         uint256 _loc;
@@ -189,12 +170,11 @@ library TypedMemView {
      * @param _slice    The slice where the overrun occurred
      * @return          err - The err
      */
-    function indexErrOverrun(
-        uint256 _loc,
-        uint256 _len,
-        uint256 _index,
-        uint256 _slice
-    ) internal pure returns (string memory err) {
+    function indexErrOverrun(uint256 _loc, uint256 _len, uint256 _index, uint256 _slice)
+        internal
+        pure
+        returns (string memory err)
+    {
         (, uint256 a) = encodeHex(_loc);
         (, uint256 b) = encodeHex(_len);
         (, uint256 c) = encodeHex(_index);
@@ -224,28 +204,14 @@ library TypedMemView {
      * @param _bytes    The bytes
      * @return          result - The 32 byte result
      */
-    function index(
-        bytes29 memView,
-        uint256 _index,
-        uint8 _bytes
-    ) internal pure returns (bytes32 result) {
+    function index(bytes29 memView, uint256 _index, uint8 _bytes) internal pure returns (bytes32 result) {
         if (_bytes == 0) {
             return bytes32(0);
         }
         if (_index + _bytes > len(memView)) {
-            revert(
-                indexErrOverrun(
-                    loc(memView),
-                    len(memView),
-                    _index,
-                    uint256(_bytes)
-                )
-            );
+            revert(indexErrOverrun(loc(memView), len(memView), _index, uint256(_bytes)));
         }
-        require(
-            _bytes <= 32,
-            "TypedMemView/index - Attempted to index more than 32 bytes"
-        );
+        require(_bytes <= 32, "TypedMemView/index - Attempted to index more than 32 bytes");
 
         uint8 bitLength;
         unchecked {
@@ -267,11 +233,7 @@ library TypedMemView {
      * @param _bytes    The bytes
      * @return          result - The unsigned integer
      */
-    function indexUint(
-        bytes29 memView,
-        uint256 _index,
-        uint8 _bytes
-    ) internal pure returns (uint256 result) {
+    function indexUint(bytes29 memView, uint256 _index, uint8 _bytes) internal pure returns (uint256 result) {
         return uint256(index(memView, _index, _bytes)) >> ((32 - _bytes) * 8);
     }
 }
