@@ -77,8 +77,7 @@ contract AdminPausableTest is Test {
         BuyArgs memory buyArgs = BuyArgs({
             buyToken: bytes32(0x0000000000000000000000000000000000000000000000000000000000000001), // 假设的 buyToken
             guaranteedBuyAmount: 1000,
-            buycallgas: 50000,
-            buycalldata: hex"123456"
+            memo: bytes(hex"")
         });
 
         bytes32 recipient = bytes32(0x0000000000000000000000000000000000000000000000000000000000000001);
@@ -112,8 +111,7 @@ contract AdminPausableTest is Test {
         BuyArgs memory buyArgs = BuyArgs({
             buyToken: bytes32(0x0000000000000000000000000000000000000000000000000000000000000001),
             guaranteedBuyAmount: 1000,
-            buycallgas: 50000,
-            buycalldata: hex"123456"
+            memo: bytes(hex"")
         });
 
         bytes32 recipient = bytes32(0x0000000000000000000000000000000000000000000000000000000000000001);
@@ -141,8 +139,7 @@ contract AdminPausableTest is Test {
         BuyArgs memory buyArgs = BuyArgs({
             buyToken: bytes32(0x0000000000000000000000000000000000000000000000000000000000000001),
             guaranteedBuyAmount: 1000,
-            buycallgas: 50000,
-            buycalldata: hex"123456"
+            memo: bytes(hex"")
         });
 
         bytes32 recipient = bytes32(0x0000000000000000000000000000000000000000000000000000000000000001);

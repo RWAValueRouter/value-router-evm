@@ -79,8 +79,7 @@ struct SellArgs {
 struct BuyArgs {
     bytes32 buyToken;
     uint256 guaranteedBuyAmount;
-    uint256 buycallgas;
-    bytes buycalldata;
+    bytes memo;
 }
 
 struct Fee {
@@ -90,17 +89,6 @@ struct Fee {
 
 interface IValueRouter {
     event TakeFee(address to, uint256 amount);
-
-    event SwapAndBridge(
-        address sellToken,
-        address buyToken,
-        uint256 bridgeUSDCAmount,
-        uint32 destDomain,
-        address recipient,
-        uint64 bridgeNonce,
-        uint64 swapMessageNonce,
-        bytes32 bridgeHash
-    );
 
     event SwapAndBridge2(
         address sellToken,
@@ -112,6 +100,8 @@ interface IValueRouter {
         uint64 swapMessageNonce,
         bytes32 bridgeHash
     );
+
+    event Memo(bytes memo);
 
     event ReplaceSwapMessage(address buyToken, uint32 destDomain, address recipient, uint64 swapMessageNonce);
 
@@ -231,7 +221,7 @@ contract ValueRouter is IValueRouter, AdminPausable {
     }
 
     function takeFee(address to, uint256 amount) public onlyAdmin {
-        (bool succ, ) = to.call{value: amount}("");
+        (bool succ,) = to.call{value: amount}("");
         require(succ);
         emit TakeFee(to, amount);
     }
@@ -382,16 +372,6 @@ contract ValueRouter is IValueRouter, AdminPausable {
         if (isNoble(destDomain)) {
             bridgeNonce =
                 tokenMessenger.depositForBurnWithCaller(bridgeUSDCAmount, destDomain, recipient, usdc, nobleCaller);
-            emit SwapAndBridge(
-                sellArgs.sellToken,
-                buyArgs.buyToken.bytes32ToAddress(),
-                bridgeUSDCAmount,
-                destDomain,
-                recipient.bytes32ToAddress(),
-                bridgeNonce,
-                0,
-                bytes32(0)
-            );
             emit SwapAndBridge2(
                 sellArgs.sellToken,
                 buyArgs.buyToken,
@@ -402,6 +382,8 @@ contract ValueRouter is IValueRouter, AdminPausable {
                 0,
                 bytes32(0)
             );
+
+            emit Memo(buyArgs.memo);
             return (bridgeNonce, 0);
         }
 
@@ -438,16 +420,6 @@ contract ValueRouter is IValueRouter, AdminPausable {
                 swapMessage.encode()
             );
         }
-        emit SwapAndBridge(
-            sellArgs.sellToken,
-            buyArgs.buyToken.bytes32ToAddress(),
-            bridgeUSDCAmount,
-            destDomain,
-            recipient.bytes32ToAddress(),
-            bridgeNonce,
-            swapMessageNonce,
-            bridgeNonceHash
-        );
         emit SwapAndBridge2(
             sellArgs.sellToken,
             buyArgs.buyToken,
@@ -458,6 +430,8 @@ contract ValueRouter is IValueRouter, AdminPausable {
             swapMessageNonce,
             bridgeNonceHash
         );
+
+        emit Memo(buyArgs.memo);
         swapHashSender[keccak256(abi.encode(destDomain, swapMessageNonce))] = msg.sender;
         return (bridgeNonce, swapMessageNonce);
     }
