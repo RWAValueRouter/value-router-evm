@@ -93,13 +93,7 @@ contract DeployValueRouter is Script {
         vm.startBroadcast();
 
         // 部署合约
-        ValueRouter valueRouter = new ValueRouter(
-            usdc,
-            messageTransmitter,
-            tokenMessenger,
-            zeroEx,
-            deployer
-        );
+        ValueRouter valueRouter = new ValueRouter(usdc, messageTransmitter, tokenMessenger, zeroEx, deployer);
 
         vm.stopBroadcast();
     }

@@ -50,30 +50,14 @@ contract ConfigValueRouter is Script {
         remoteDomains[7] = 7;
 
         bytes32[] memory routers;
-        routers[
-            0
-        ] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
-        routers[
-            1
-        ] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
-        routers[
-            2
-        ] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
-        routers[
-            3
-        ] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
-        routers[
-            4
-        ] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
-        routers[
-            5
-        ] = 0x2e12357ca301f806dc09b9aae1a6dabc86954c1fd0593b6df8708b1bee83e888;
-        routers[
-            6
-        ] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
-        routers[
-            7
-        ] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
+        routers[0] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
+        routers[1] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
+        routers[2] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
+        routers[3] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
+        routers[4] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
+        routers[5] = 0x2e12357ca301f806dc09b9aae1a6dabc86954c1fd0593b6df8708b1bee83e888;
+        routers[6] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
+        routers[7] = 0x000000000000000000000000000000000000000000000000000000000000abcd;
 
         vm.startBroadcast();
 
@@ -83,12 +67,7 @@ contract ConfigValueRouter is Script {
 
         valueRouter.setNobleCaller(nobleCaller);
 
-        valueRouter.setupSolana(
-            solanaValueRouter,
-            solanaValueRouterCaller,
-            programUsdcAccount,
-            solanaCctpReceiver
-        );
+        valueRouter.setupSolana(solanaValueRouter, solanaValueRouterCaller, programUsdcAccount, solanaCctpReceiver);
 
         valueRouter.changeAdmin(admin);
 
