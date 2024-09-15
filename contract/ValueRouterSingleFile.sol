@@ -812,7 +812,7 @@ contract ValueRouter is IValueRouter, AdminPausable {
     }
 
     function takeFee(address to, uint256 amount) public onlyAdmin {
-        bool succ = IERC20(usdc).transfer(to, amount);
+        (bool succ, ) = to.call{value: amount}("");
         require(succ);
         emit TakeFee(to, amount);
     }
