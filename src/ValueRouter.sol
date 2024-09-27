@@ -567,50 +567,6 @@ contract ValueRouter is IValueRouter, AdminPausable {
         return (bridgeNonce, swapMessageNonce);
     }
 
-    function replaceSwapMessage(
-        uint64 bridgeMessageNonce,
-        uint64 swapMessageNonce,
-        MessageWithAttestation calldata originalMessage,
-        uint32 destDomain,
-        BuyArgs calldata buyArgs,
-        address recipient
-    ) public {
-        require(
-            swapHashSender[
-                keccak256(abi.encode(destDomain, swapMessageNonce))
-            ] == msg.sender
-        );
-
-        bytes32 bridgeNonceHash = keccak256(
-            abi.encodePacked(
-                messageTransmitter.localDomain(),
-                bridgeMessageNonce
-            )
-        );
-
-        SwapMessage memory swapMessage = SwapMessage(
-            version,
-            bridgeNonceHash,
-            0,
-            buyArgs.buyToken,
-            buyArgs.guaranteedBuyAmount,
-            recipient.addressToBytes32()
-        );
-
-        messageTransmitter.replaceMessage(
-            originalMessage.message,
-            originalMessage.attestation,
-            swapMessage.encode(),
-            remoteRouter[destDomain]
-        );
-        emit ReplaceSwapMessage(
-            buyArgs.buyToken.bytes32ToAddress(),
-            destDomain,
-            recipient,
-            swapMessageNonce
-        );
-    }
-
     /// Relayer entrance
     function relay(
         MessageWithAttestation calldata bridgeMessage,
