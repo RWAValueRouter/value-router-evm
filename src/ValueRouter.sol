@@ -264,7 +264,8 @@ contract ValueRouter is IValueRouter, AdminPausable {
         uint256 sellAmount,
         address buyToken,
         uint256 guaranteedBuyAmount,
-        address recipient
+        address recipient,
+        uint256 value
     ) public payable returns (uint256 boughtAmount) {
         // before swap
         // approve
@@ -282,7 +283,7 @@ contract ValueRouter is IValueRouter, AdminPausable {
             buyToken_bal_0 = IERC20(buyToken).balanceOf(address(this));
         }
 
-        _zeroExSwap(swapcalldata, callgas);
+        _zeroExSwap(swapcalldata, callgas, value);
 
         // after swap
         // cancel approval
@@ -317,10 +318,12 @@ contract ValueRouter is IValueRouter, AdminPausable {
         return boughtAmount;
     }
 
-    function _zeroExSwap(bytes memory swapcalldata, uint256 callgas) internal {
-        (bool succ, ) = zeroEx.call{value: msg.value, gas: callgas}(
-            swapcalldata
-        );
+    function _zeroExSwap(
+        bytes memory swapcalldata,
+        uint256 callgas,
+        uint256 value
+    ) internal {
+        (bool succ, ) = zeroEx.call{value: value, gas: callgas}(swapcalldata);
         require(succ, "call swap failed");
     }
 
@@ -352,7 +355,8 @@ contract ValueRouter is IValueRouter, AdminPausable {
             sellAmount,
             buyToken,
             guaranteedBuyAmount,
-            recipient
+            recipient,
+            msg.value
         );
         emit LocalSwap(
             msg.sender,
@@ -385,20 +389,17 @@ contract ValueRouter is IValueRouter, AdminPausable {
         // to receive usdc on dest -> _fee = bridgeFee
         // to receive other token on dest (require swap) -> _fee = swapFee
 
-        require(
-            msg.value >=
-                (
-                    (buyArgs.buyToken == bytes32(0) ||
-                        (isSolana(destDomain) &&
-                            buyArgs.buyToken ==
-                            bytes32(
-                                0xc6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61
-                            )))
-                        ? fee[destDomain].bridgeFee
-                        : fee[destDomain].swapFee
-                ),
-            "Insufficient fee"
+        uint256 fee = (
+            (buyArgs.buyToken == bytes32(0) ||
+                (isSolana(destDomain) &&
+                    buyArgs.buyToken ==
+                    bytes32(
+                        0xc6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61
+                    )))
+                ? fee[destDomain].bridgeFee
+                : fee[destDomain].swapFee
         );
+        require(msg.value >= fee, "Insufficient fee");
 
         if (recipient == bytes32(0)) {
             recipient = msg.sender.addressToBytes32();
@@ -406,7 +407,7 @@ contract ValueRouter is IValueRouter, AdminPausable {
 
         // swap sellToken to usdc
         if (sellArgs.sellToken == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
-            require(msg.value >= sellArgs.sellAmount, "tx value is not enough");
+            require(msg.value >= sellArgs.sellAmount + fee, "tx value is not enough");
         } else {
             require(
                 IERC20(sellArgs.sellToken).transferFrom(
@@ -428,7 +429,8 @@ contract ValueRouter is IValueRouter, AdminPausable {
                 sellArgs.sellAmount,
                 usdc,
                 sellArgs.guaranteedBuyAmount,
-                address(0)
+                address(0),
+                msg.value - fee
             );
         }
 
@@ -701,7 +703,8 @@ contract ValueRouter is IValueRouter, AdminPausable {
                     swapAmount,
                     swapArgs.buyToken.bytes32ToAddress(),
                     swapArgs.guaranteedBuyAmount,
-                    recipient
+                    recipient,
+                    0
                 )
             {} catch {
                 IERC20(usdc).transfer(recipient, swapAmount);
