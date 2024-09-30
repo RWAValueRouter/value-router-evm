@@ -407,7 +407,10 @@ contract ValueRouter is IValueRouter, AdminPausable {
 
         // swap sellToken to usdc
         if (sellArgs.sellToken == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
-            require(msg.value >= sellArgs.sellAmount + fee, "tx value is not enough");
+            require(
+                msg.value >= sellArgs.sellAmount + fee,
+                "tx value is not enough"
+            );
         } else {
             require(
                 IERC20(sellArgs.sellToken).transferFrom(
@@ -579,9 +582,13 @@ contract ValueRouter is IValueRouter, AdminPausable {
             swapMessage.message.sourceDomain() == sourceDomain,
             "inconsistent source domain"
         );
+        require(
+            bridgeMessage.message.nonce() + 1 == swapMessage.message.nonce(),
+            "nonce not match"
+        );
         if (isNoble(sourceDomain)) {
             require(
-                swapMessage.message.sender() == swapMessage.message.sender(),
+                bridgeMessage.message.sender() == swapMessage.message.sender(),
                 "inconsistent noble messages sender"
             );
         }

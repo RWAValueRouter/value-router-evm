@@ -132,7 +132,9 @@ library CCTPMessage {
     using TypedMemView for bytes;
     using TypedMemView for bytes29;
     using Bytes for bytes;
+
     uint8 public constant SOURCE_DOMAIN_INDEX = 4;
+    uint8 public constant NONCE_INDEX = 12;
     uint8 public constant SENDER_INDEX = 20;
     uint8 public constant DESTINATION_CALLER_INDEX = 84;
     uint8 public constant MESSAGE_BODY_INDEX = 116;
@@ -143,6 +145,14 @@ library CCTPMessage {
 
     function sourceDomain(bytes memory _message) public pure returns (uint32) {
         return _sourceDomain(_message.ref(0));
+    }
+
+    function _nonce(bytes29 _messageRef) private pure returns (uint64) {
+        return uint64(_messageRef.indexUint(NONCE_INDEX, 8));
+    }
+
+    function nonce(bytes memory _message) public pure returns (uint64) {
+        return _nonce(_message.ref(0));
     }
 
     function _sender(bytes29 _messageRef) private pure returns (bytes32) {
@@ -826,7 +836,8 @@ contract ValueRouter is IValueRouter, AdminPausable {
         uint256 sellAmount,
         address buyToken,
         uint256 guaranteedBuyAmount,
-        address recipient
+        address recipient,
+        uint256 value
     ) public payable returns (uint256 boughtAmount) {
         // before swap
         // approve
@@ -844,7 +855,7 @@ contract ValueRouter is IValueRouter, AdminPausable {
             buyToken_bal_0 = IERC20(buyToken).balanceOf(address(this));
         }
 
-        _zeroExSwap(swapcalldata, callgas);
+        _zeroExSwap(swapcalldata, callgas, value);
 
         // after swap
         // cancel approval
@@ -879,10 +890,12 @@ contract ValueRouter is IValueRouter, AdminPausable {
         return boughtAmount;
     }
 
-    function _zeroExSwap(bytes memory swapcalldata, uint256 callgas) internal {
-        (bool succ, ) = zeroEx.call{value: msg.value, gas: callgas}(
-            swapcalldata
-        );
+    function _zeroExSwap(
+        bytes memory swapcalldata,
+        uint256 callgas,
+        uint256 value
+    ) internal {
+        (bool succ, ) = zeroEx.call{value: value, gas: callgas}(swapcalldata);
         require(succ, "call swap failed");
     }
 
@@ -914,7 +927,8 @@ contract ValueRouter is IValueRouter, AdminPausable {
             sellAmount,
             buyToken,
             guaranteedBuyAmount,
-            recipient
+            recipient,
+            msg.value
         );
         emit LocalSwap(
             msg.sender,
@@ -947,20 +961,17 @@ contract ValueRouter is IValueRouter, AdminPausable {
         // to receive usdc on dest -> _fee = bridgeFee
         // to receive other token on dest (require swap) -> _fee = swapFee
 
-        require(
-            msg.value >=
-                (
-                    (buyArgs.buyToken == bytes32(0) ||
-                        (isSolana(destDomain) &&
-                            buyArgs.buyToken ==
-                            bytes32(
-                                0xc6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61
-                            )))
-                        ? fee[destDomain].bridgeFee
-                        : fee[destDomain].swapFee
-                ),
-            "Insufficient fee"
+        uint256 fee = (
+            (buyArgs.buyToken == bytes32(0) ||
+                (isSolana(destDomain) &&
+                    buyArgs.buyToken ==
+                    bytes32(
+                        0xc6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61
+                    )))
+                ? fee[destDomain].bridgeFee
+                : fee[destDomain].swapFee
         );
+        require(msg.value >= fee, "Insufficient fee");
 
         if (recipient == bytes32(0)) {
             recipient = msg.sender.addressToBytes32();
@@ -968,7 +979,10 @@ contract ValueRouter is IValueRouter, AdminPausable {
 
         // swap sellToken to usdc
         if (sellArgs.sellToken == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
-            require(msg.value >= sellArgs.sellAmount, "tx value is not enough");
+            require(
+                msg.value >= sellArgs.sellAmount + fee,
+                "tx value is not enough"
+            );
         } else {
             require(
                 IERC20(sellArgs.sellToken).transferFrom(
@@ -990,7 +1004,8 @@ contract ValueRouter is IValueRouter, AdminPausable {
                 sellArgs.sellAmount,
                 usdc,
                 sellArgs.guaranteedBuyAmount,
-                address(0)
+                address(0),
+                msg.value - fee
             );
         }
 
@@ -1127,50 +1142,6 @@ contract ValueRouter is IValueRouter, AdminPausable {
         return (bridgeNonce, swapMessageNonce);
     }
 
-    function replaceSwapMessage(
-        uint64 bridgeMessageNonce,
-        uint64 swapMessageNonce,
-        MessageWithAttestation calldata originalMessage,
-        uint32 destDomain,
-        BuyArgs calldata buyArgs,
-        address recipient
-    ) public {
-        require(
-            swapHashSender[
-                keccak256(abi.encode(destDomain, swapMessageNonce))
-            ] == msg.sender
-        );
-
-        bytes32 bridgeNonceHash = keccak256(
-            abi.encodePacked(
-                messageTransmitter.localDomain(),
-                bridgeMessageNonce
-            )
-        );
-
-        SwapMessage memory swapMessage = SwapMessage(
-            version,
-            bridgeNonceHash,
-            0,
-            buyArgs.buyToken,
-            buyArgs.guaranteedBuyAmount,
-            recipient.addressToBytes32()
-        );
-
-        messageTransmitter.replaceMessage(
-            originalMessage.message,
-            originalMessage.attestation,
-            swapMessage.encode(),
-            remoteRouter[destDomain]
-        );
-        emit ReplaceSwapMessage(
-            buyArgs.buyToken.bytes32ToAddress(),
-            destDomain,
-            recipient,
-            swapMessageNonce
-        );
-    }
-
     /// Relayer entrance
     function relay(
         MessageWithAttestation calldata bridgeMessage,
@@ -1183,9 +1154,13 @@ contract ValueRouter is IValueRouter, AdminPausable {
             swapMessage.message.sourceDomain() == sourceDomain,
             "inconsistent source domain"
         );
+        require(
+            bridgeMessage.message.nonce() + 1 == swapMessage.message.nonce(),
+            "nonce not match"
+        );
         if (isNoble(sourceDomain)) {
             require(
-                swapMessage.message.sender() == swapMessage.message.sender(),
+                bridgeMessage.message.sender() == swapMessage.message.sender(),
                 "inconsistent noble messages sender"
             );
         }
@@ -1263,7 +1238,8 @@ contract ValueRouter is IValueRouter, AdminPausable {
                     swapAmount,
                     swapArgs.buyToken.bytes32ToAddress(),
                     swapArgs.guaranteedBuyAmount,
-                    recipient
+                    recipient,
+                    0
                 )
             {} catch {
                 IERC20(usdc).transfer(recipient, swapAmount);
