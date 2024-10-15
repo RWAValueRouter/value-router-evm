@@ -267,6 +267,7 @@ contract ValueRouter is IValueRouter, AdminPausable {
         address recipient,
         uint256 value
     ) public payable returns (uint256 boughtAmount) {
+        require(value <= msg.value, "msg value not enough");
         // before swap
         // approve
         if (sellToken != 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
@@ -586,12 +587,6 @@ contract ValueRouter is IValueRouter, AdminPausable {
             bridgeMessage.message.nonce() + 1 == swapMessage.message.nonce(),
             "nonce not match"
         );
-        if (isNoble(sourceDomain)) {
-            require(
-                bridgeMessage.message.sender() == swapMessage.message.sender(),
-                "inconsistent noble messages sender"
-            );
-        }
         // 1. decode swap message, get binding bridge message nonce.
         SwapMessage memory swapArgs = swapMessage.message.body().decode();
 

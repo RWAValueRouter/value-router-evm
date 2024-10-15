@@ -14,7 +14,7 @@ contract ConfigValueRouter is Script {
             contractAddress = 0x0000000000000000000000000000000000000000;
         } else if (chainId == 43114) {
             // Avalanche-C
-            contractAddress = 0x47faeB3d444b9361FdB8a04Ce6b4B496B1f17Da5;
+            contractAddress = 0x43Dc3A0abc0148b2Cc9E76699Aa9e8f5edf69B36;
         } else if (chainId == 10) {
             // Optimism
             contractAddress = 0x0000000000000000000000000000000000000000;
@@ -34,9 +34,9 @@ contract ConfigValueRouter is Script {
 
         bytes32 nobleCaller = bytes32(0x000000000000000000000000bbc905eb987498003c94d64bba25ee5efe84b51e);
 
-        bytes32 solanaValueRouter = bytes32(0xa6c0e7016507277d7503fea5e160d27919005380d75db7879e91c6f98cbf26db);
-        bytes32 solanaValueRouterCaller = bytes32(0xbcca4980b2dd4667e41caf3a4108d667356db8b852abd4dcd6db393847e47fd2);
-        bytes32 programUsdcAccount = bytes32(0x9a5199e0b220389ae61787e72e3adfba437dc2d8468d87bf402438c63fdb6f89);
+        bytes32 solanaValueRouter = bytes32(0x003084f9571ca2a55253e5d3c3194bbb240de72173b0adff5a88c36255f85b25);
+        bytes32 solanaValueRouterCaller = bytes32(0xbc30db1770ae6f9957e4d41baec0a767b98869e74f2d9dd82dde5b71c4a45dda);
+        bytes32 programUsdcAccount = bytes32(0x29aade440d65cd315ab6b5cccdd5545e1a720db6e7b7d94dc56ded8d5c1ee9f3);
         bytes32 solanaCctpReceiver = bytes32(0x4352e98d0dfef2a95d0a81a56c960dec102111ac0ba732ab8858a5891dfb5df0);
 
         uint32[] memory remoteDomains = new uint32[](8);
