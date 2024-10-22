@@ -652,26 +652,13 @@ struct Fee {
 interface IValueRouter {
     event TakeFee(address to, uint256 amount);
 
-    event SwapAndBridge(
-        address sellToken,
-        address buyToken,
-        uint256 bridgeUSDCAmount,
-        uint32 destDomain,
-        address recipient,
-        uint64 bridgeNonce,
-        uint64 swapMessageNonce,
-        bytes32 bridgeHash
-    );
-
     event SwapAndBridge2(
         address sellToken,
         bytes32 buyToken,
         uint256 bridgeUSDCAmount,
         uint32 destDomain,
         bytes32 recipient,
-        uint64 bridgeNonce,
-        uint64 swapMessageNonce,
-        bytes32 bridgeHash
+        bytes memo
     );
 
     event ReplaceSwapMessage(

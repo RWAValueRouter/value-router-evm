@@ -11,22 +11,22 @@ contract ConfigValueRouter is Script {
         address contractAddress;
         if (chainId == 1) {
             // Ethereum
-            contractAddress = 0x0000000000000000000000000000000000000000;
+            contractAddress = 0x66F011F9F4ab937b47f51a8da5542c897D12E3Cb;
         } else if (chainId == 43114) {
             // Avalanche-C
             contractAddress = 0x43Dc3A0abc0148b2Cc9E76699Aa9e8f5edf69B36;
         } else if (chainId == 10) {
             // Optimism
-            contractAddress = 0x0000000000000000000000000000000000000000;
+            contractAddress = 0xc17cffDaA599A759d06EE2Eae88866055622d937;
         } else if (chainId == 42161) {
             // Arbitrum
-            contractAddress = 0x0000000000000000000000000000000000000000;
+            contractAddress = 0xE438AADd3C34e444FF775F7d376ffE54d197673A;
         } else if (chainId == 8453) {
             // Base
-            contractAddress = 0x0000000000000000000000000000000000000000;
+            contractAddress = 0x7C5d3CF79f213F691637AB28b414eBCB41F4FfbB;
         } else if (chainId == 137) {
             // Polygon
-            contractAddress = 0x0000000000000000000000000000000000000000;
+            contractAddress = 0x7C5d3CF79f213F691637AB28b414eBCB41F4FfbB;
         } else {
             revert("Unsupported chain");
         }
@@ -50,14 +50,14 @@ contract ConfigValueRouter is Script {
         remoteDomains[7] = 7;
 
         bytes32[] memory routers = new bytes32[](8);
-        routers[0] = bytes32(0x000000000000000000000000000000000000000000000000000000000000abcd);
-        routers[1] = bytes32(0x000000000000000000000000000000000000000000000000000000000000abcd);
-        routers[2] = bytes32(0x000000000000000000000000000000000000000000000000000000000000abcd);
-        routers[3] = bytes32(0x000000000000000000000000000000000000000000000000000000000000abcd);
+        routers[0] = bytes32(0x00000000000000000000000066F011F9F4ab937b47f51a8da5542c897D12E3Cb);
+        routers[1] = bytes32(0x00000000000000000000000043Dc3A0abc0148b2Cc9E76699Aa9e8f5edf69B36);
+        routers[2] = bytes32(0x000000000000000000000000c17cffDaA599A759d06EE2Eae88866055622d937);
+        routers[3] = bytes32(0x000000000000000000000000E438AADd3C34e444FF775F7d376ffE54d197673A);
         routers[4] = bytes32(0x000000000000000000000000000000000000000000000000000000000000abcd);
         routers[5] = solanaValueRouter;
-        routers[6] = bytes32(0x000000000000000000000000000000000000000000000000000000000000abcd);
-        routers[7] = bytes32(0x000000000000000000000000000000000000000000000000000000000000abcd);
+        routers[6] = bytes32(0x0000000000000000000000007C5d3CF79f213F691637AB28b414eBCB41F4FfbB);
+        routers[7] = bytes32(0x0000000000000000000000007C5d3CF79f213F691637AB28b414eBCB41F4FfbB);
 
         vm.startBroadcast();
 
